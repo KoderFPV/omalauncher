@@ -20,6 +20,8 @@ jobs:
           java-version: 25
       - uses: gradle/actions/setup-gradle@v4
       - uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
       # Keep the test-only key across builds so a later test APK can update the first.
       # It is NOT a production signing key; never use it for store releases.
       - uses: actions/cache@v4
