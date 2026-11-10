@@ -12,6 +12,9 @@ val uploadKey = rootProject.file("keystore.properties").takeIf { it.exists() }
 // The NDK proot is built with (scripts/fetch-proot.sh); wlbridge uses the same one.
 val prootNdk = rootProject.file("scripts/fetch-proot.sh").readLines().first { it.startsWith("NDK_VERSION=") }.substringAfter('=')
 
+// Local testing only: never install an unsigned replacement over the user's production launcher.
+val isolatedScrollTest = providers.gradleProperty("isolatedScrollTest").orNull == "true"
+
 android {
     namespace = "dev.omalauncher"
     compileSdk = 37
@@ -24,6 +27,7 @@ android {
         versionCode = 34
         versionName = "1.1.0"
         ndk { abiFilters += "arm64-v8a" }
+        manifestPlaceholders["launcherLabel"] = "@string/app_name"
     }
 
     buildFeatures { buildConfig = true }
@@ -60,7 +64,14 @@ android {
 
     buildTypes {
         // en-XA and ar-XB: text that stays plain English or left-to-right there isn't in res/ yet.
-        debug { isPseudoLocalesEnabled = true }
+        debug {
+            isPseudoLocalesEnabled = true
+            if (isolatedScrollTest) {
+                applicationIdSuffix = ".scrolltest"
+                versionNameSuffix = "-scrolltest"
+                manifestPlaceholders["launcherLabel"] = "Omalauncher Scroll Test"
+            }
+        }
         release {
             // Shrinks the APK and drops what the app doesn't use, like the owl module's unused parts.
             isMinifyEnabled = true

@@ -1,0 +1,65 @@
+name: Terminal scroll test APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [terminal-scroll-test]
+
+permissions:
+  contents: read
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 25
+      - uses: gradle/actions/setup-gradle@v4
+      - uses: android-actions/setup-android@v3
+      # Keep the test-only key across builds so a later test APK can update the first.
+      # It is NOT a production signing key; never use it for store releases.
+      - uses: actions/cache@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: terminal-scroll-test-signing-v1
+      - name: Install SDK and native build dependencies
+        shell: bash
+        run: |
+          ndk=$(sed -n 's/^NDK_VERSION=//p' scripts/fetch-proot.sh)
+          sdkmanager "platforms;android-37" "ndk;$ndk" "cmake;3.22.1"
+          sudo apt-get update
+          sudo apt-get install -y libarchive-tools gawk
+      - name: Package the Linux runtime (required for working terminals)
+        run: ./scripts/fetch-proot.sh
+      - name: Test
+        run: ./gradlew :owl:test :app:testDebugUnitTest :owl:owlJar
+      - name: Build and lint the normal configuration
+        run: ./gradlew :app:assembleDebug :app:lintDebug
+      - name: Build the isolated test app
+        run: ./gradlew -PisolatedScrollTest=true :app:assembleDebug :app:lintDebug
+      - name: Verify isolated identity and native runtime
+        shell: bash
+        run: |
+          apk=app/build/outputs/apk/debug/app-debug.apk
+          test "$("$ANDROID_HOME/cmdline-tools/latest/bin/apkanalyzer" manifest application-id "$apk")" = dev.omalauncher.scrolltest
+          for lib in libproot.so libproot-loader.so libtalloc.so libandroid-shmem.so libwlbridge.so libaap.so; do
+            unzip -l "$apk" "lib/arm64-v8a/$lib" | grep -F "lib/arm64-v8a/$lib"
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: omalauncher-scroll-test-arm64
+          path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: terminal-scroll-test-reports
+          path: |
+            app/build/reports/
+            owl/build/reports/
+          if-no-files-found: ignore
