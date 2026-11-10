@@ -32,7 +32,7 @@ jobs:
         shell: bash
         run: |
           ndk=$(sed -n 's/^NDK_VERSION=//p' scripts/fetch-proot.sh)
-          sdkmanager "platforms;android-37" "ndk;$ndk" "cmake;3.22.1"
+          sdkmanager "platforms;android-37.0" "ndk;$ndk" "cmake;3.22.1"
           sudo apt-get update
           sudo apt-get install -y libarchive-tools gawk
       - name: Package the Linux runtime (required for working terminals)
