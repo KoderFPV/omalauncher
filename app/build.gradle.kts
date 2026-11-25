@@ -29,6 +29,9 @@ val sherpaAar = file("libs/sherpa-onnx-$sherpaVersion.aar").also { aar ->
     part.renameTo(aar)
 }
 
+// Test build: a separate app next to the production launcher, never an unsigned replacement for it.
+val isolatedTest = providers.gradleProperty("isolatedScrollTest").orNull == "true"
+
 android {
     namespace = "dev.omalauncher"
     compileSdk = 37
@@ -38,6 +41,7 @@ android {
         applicationId = "dev.omalauncher"
         minSdk = 29
         targetSdk = 37
+        manifestPlaceholders["launcherLabel"] = "@string/app_name"
         versionCode = 47
         versionName = "1.11.0"
         ndk { abiFilters += "arm64-v8a" }
@@ -90,7 +94,14 @@ android {
 
     buildTypes {
         // en-XA and ar-XB: text that stays plain English or left-to-right there isn't in res/ yet.
-        debug { isPseudoLocalesEnabled = true }
+        debug {
+            isPseudoLocalesEnabled = true
+            if (isolatedTest) {
+                applicationIdSuffix = ".scrolltest"
+                versionNameSuffix = "-scrolltest"
+                manifestPlaceholders["launcherLabel"] = "Omalauncher Scroll Test"
+            }
+        }
         release {
             // Shrinks the APK and drops what the app doesn't use, like the owl module's unused parts.
             isMinifyEnabled = true

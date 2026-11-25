@@ -3,7 +3,7 @@ name: Main launcher APK with scroll fix
 on:
   workflow_dispatch:
   push:
-    branches: [scroll-main-build]
+    branches: [scroll-test-main]
 
 permissions:
   contents: read
@@ -27,7 +27,7 @@ jobs:
       - uses: actions/cache@v4
         with:
           path: ~/.android/debug.keystore
-          key: main-build-signing-v1
+          key: terminal-scroll-test-signing-v1
       - name: Install SDK and native build dependencies
         shell: bash
         run: |
@@ -40,10 +40,10 @@ jobs:
       - name: Test
         run: ./gradlew :owl:test :app:testFossDebugUnitTest :owl:owlJar
       - name: Build
-        run: ./gradlew :app:assembleFossDebug
+        run: ./gradlew -PisolatedScrollTest=true :app:assembleFossDebug
       - uses: actions/upload-artifact@v4
         with:
-          name: omalauncher-main-scrollfix
+          name: omalauncher-scrolltest-main
           path: app/build/outputs/apk/foss/debug/app-foss-debug.apk
           if-no-files-found: error
           retention-days: 14
